@@ -94,11 +94,11 @@ Public Class Class1
 
 #End Region
 
-    Private Shared Function GetUserInfo() As UserInfo
+    Private Shared Function GetUserInfo(ByVal fiPortalId As Integer) As UserInfo
         Dim a As New UserInfo
         a.FirstName = FirstName
         a.LastName = LastName
-        a.PortalID = PortalID
+        a.PortalID = fiPortalId
         a.Email = EMail
         a.Username = UserName
         a.DisplayName = DisplayName
@@ -116,9 +116,9 @@ Public Class Class1
         Return a
     End Function
 
-    Public Shared Function CreateUser() As UserCreateStatus
+    Public Shared Function CreateUser(ByVal fiPortalId As Integer) As UserCreateStatus
         Dim createStatus As UserCreateStatus = UserCreateStatus.AddUser
-        Dim user As UserInfo = GetUserInfo()
+        Dim user As UserInfo = GetUserInfo(fiPortalId)
         'Create the User
 
         createStatus = memberProvider.CreateUser(user)
@@ -142,19 +142,34 @@ Public Class Class1
             '    objRoles.AddUserRole(user.PortalID, user.UserID, 5, Null.NullDate, Null.NullDate)
             'End If
         End If
-        Return createStatus.ToString
+        Return createStatus
     End Function
 
     Public Shared Function addRoleToUser(ByRef user As UserInfo, ByVal roleName As String, ByRef expiry As DateTime) As Boolean
         Dim rc As Boolean = False
         Dim roleCtl As RoleController = New RoleController
+
+
+
         Dim newRole As RoleInfo = roleCtl.GetRoleByName(user.PortalID, roleName)
 
         If newRole IsNot Nothing And user IsNot Nothing Then
-            rc = user.IsInRole(roleName)
             roleCtl.AddUserRole(user.PortalID, user.UserID, newRole.RoleID, DateTime.MinValue, expiry)
             user = UserController.GetUserById(user.PortalID, user.UserID)
             rc = user.IsInRole(roleName)
+            'ElseIf newRole Is Nothing And user IsNot Nothing Then
+            '    Dim loRole As RoleInfo = New RoleInfo()
+            '    loRole.IsPublic = True
+            '    loRole.PortalID = user.PortalID
+            '    loRole.RoleName = "Google User"
+            '    loRole.Status = RoleStatus.Approved
+
+            '    Dim roleid As Integer = roleCtl.AddRole(loRole)
+
+            '    roleCtl.AddUserRole(user.PortalID, user.UserID, roleid, DateTime.MinValue, expiry)
+            '    user = UserController.GetUserById(user.PortalID, user.UserID)
+            '    rc = user.IsInRole(loRole.RoleName)
+
         End If
 
         Return rc
