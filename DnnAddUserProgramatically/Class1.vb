@@ -13,6 +13,7 @@ Public Class Class1
     Shared _displayName As String = ""
     Shared _email As String = ""
     Shared _portalID As Integer = -1
+    Shared _password As String = ""
 
 #Region "Properties"
 
@@ -64,6 +65,15 @@ Public Class Class1
         End Set
     End Property
 
+    Public Shared Property Password As String
+        Get
+            Return _password
+        End Get
+        Set(ByVal value As String)
+            _password = value
+        End Set
+    End Property
+
     Public Shared Property PortalID As Integer
         Get
             If _portalID = -1 Then
@@ -92,7 +102,16 @@ Public Class Class1
         a.Email = EMail
         a.Username = UserName
         a.DisplayName = DisplayName
-        a.Membership.Password = UserController.GeneratePassword(12).ToString
+
+
+        Dim objMembership As UserMembership = New UserMembership
+        objMembership.Approved = True
+        objMembership.CreatedDate = DateTime.Now
+        objMembership.Email = EMail
+        objMembership.Username = UserName
+        objMembership.Password = Password
+
+        a.Membership = objMembership
         a.IsSuperUser = False
         Return a
     End Function
@@ -101,27 +120,44 @@ Public Class Class1
         Dim createStatus As UserCreateStatus = UserCreateStatus.AddUser
         Dim user As UserInfo = GetUserInfo()
         'Create the User
+
         createStatus = memberProvider.CreateUser(user)
         If createStatus = UserCreateStatus.Success Then
             'Dim objEventLog As New Services.Log.EventLog.EventLogController
             'objEventLog.AddLog(objUser, PortalController.GetCurrentPortalSettings, UserController.GetCurrentUserInfo.UserID, "", Services.Log.EventLog.EventLogController.EventLogType.USER_CREATED)
             DataCache.ClearPortalCache(user.PortalID, False)
-            If Not user.IsSuperUser Then
-                Dim objRoles As New RoleController
-                Dim objRole As RoleInfo
-                ' autoassign user to portal roles
-                Dim arrRoles As ArrayList = objRoles.GetPortalRoles(user.PortalID)
-                Dim i As Integer
-                For i = 0 To arrRoles.Count - 1
-                    objRole = CType(arrRoles(i), RoleInfo)
-                    If objRole.AutoAssignment = True Then
-                        objRoles.AddUserRole(user.PortalID, user.UserID, objRole.RoleID, Null.NullDate, Null.NullDate)
-                    End If
-                Next
-                objRoles.AddUserRole(user.PortalID, user.UserID, 5, Null.NullDate, Null.NullDate)
-            End If
+            addRoleToUser(user, "Google User", DateTime.Now.AddYears(25))
+            'If Not user.IsSuperUser Then
+            '    Dim objRoles As New RoleController
+            '    Dim objRole As RoleInfo
+            '    ' autoassign user to portal roles
+            '    Dim arrRoles As ArrayList = objRoles.GetPortalRoles(user.PortalID)
+            '    Dim i As Integer
+            '    For i = 0 To arrRoles.Count - 1
+            '        objRole = CType(arrRoles(i), RoleInfo)
+            '        If objRole.AutoAssignment = True Then
+            '            objRoles.AddUserRole(user.PortalID, user.UserID, objRole.RoleID, Null.NullDate, Null.NullDate)
+            '        End If
+            '    Next
+            '    objRoles.AddUserRole(user.PortalID, user.UserID, 5, Null.NullDate, Null.NullDate)
+            'End If
         End If
         Return createStatus.ToString
+    End Function
+
+    Public Shared Function addRoleToUser(ByRef user As UserInfo, ByVal roleName As String, ByRef expiry As DateTime) As Boolean
+        Dim rc As Boolean = False
+        Dim roleCtl As RoleController = New RoleController
+        Dim newRole As RoleInfo = roleCtl.GetRoleByName(user.PortalID, roleName)
+
+        If newRole IsNot Nothing And user IsNot Nothing Then
+            rc = user.IsInRole(roleName)
+            roleCtl.AddUserRole(user.PortalID, user.UserID, newRole.RoleID, DateTime.MinValue, expiry)
+            user = UserController.GetUserById(user.PortalID, user.UserID)
+            rc = user.IsInRole(roleName)
+        End If
+
+        Return rc
     End Function
 
 End Class
